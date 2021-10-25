@@ -1,0 +1,23 @@
+---
+
+- name: Ensure banner file names are set
+  assert:
+    that:
+      - banner_motd_file is defined
+      - banner_motd_file is string
+      - banner_motd_file | length > 0
+      - banner_issue_file is defined
+      - banner_issue_file is string
+      - banner_issue_file | length > 0
+      - banner_issuenet_file is defined
+      - banner_issuenet_file is string
+      - banner_issuenet_file | length > 0
+    quiet: yes
+
+- name: Ensure message is defined for graphical interface
+  assert:
+    that:
+      - banner_graphical_msg is string
+      - banner_graphical_msg | length > 0
+    quiet: yes
+  when: banner_graphical_msg is defined

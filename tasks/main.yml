@@ -1,0 +1,22 @@
+---
+# tasks file for banner
+
+- name: Validate provided variables and set os dependent variables
+  import_tasks: asserts.yml
+
+# Use copy module to copy in the appropriate files based on variable and set permissions
+- name: Install motd/issue/issue.net  banners
+  copy:
+    src: "{{ item.src }}"
+    dest: "/etc/{{ item.name }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  loop:
+    - { name: motd, src: "{{ banner_motd_file | default('undefined') }}" }
+    - { name: issue, src: "{{ banner_issue_file | default('undefined') }}" }
+    - { name: issue.net, src: "{{ banner_issuenet_file | default('undefined') }}" }
+  when: item.src != 'undefined'
+  tags:
+    - BANNERS_CONFIG
