@@ -2,4 +2,4 @@
 # handlers file for banner
 
 - name: update-dconf
-  command: "dconf update"
+  ansible.builtin.command: "dconf update"

@@ -2,11 +2,11 @@
 # tasks file for banner
 
 - name: Validate provided variables and set os dependent variables
-  import_tasks: asserts.yml
+  ansible.builtin.import_tasks: asserts.yml
 
 # Use copy module to copy in the appropriate files based on variable and set permissions
 - name: Install motd/issue/issue.net  banners
-  copy:
+  ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "/etc/{{ item.name }}"
     owner: root
