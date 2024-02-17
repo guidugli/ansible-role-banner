@@ -17,7 +17,7 @@ env:
 
 defaults:
   run:
-    working-directory: ${{ working_dir }}
+    working-directory: ${{ env.working_dir }}
 
 jobs:
 
