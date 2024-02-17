@@ -20,6 +20,7 @@ jobs:
 
   lint:
     name: Lint
+    environment: production
     runs-on: ubuntu-20.04
     steps:
       - name: Check out the codebase.
@@ -40,6 +41,7 @@ jobs:
           yamllint .
   molecule:
     name: Molecule
+    environment: production
     runs-on: ubuntu-20.04
     strategy:
       matrix:
