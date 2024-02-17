@@ -12,9 +12,12 @@ name: CI
   schedule:
     - cron: "0 5 * * 0"
 
+env:
+  working_dir: ${{ vars.WORKING_DIR }}
+
 defaults:
   run:
-    working-directory: ${{ vars.WORKING_DIR }}
+    working-directory: ${{ working_dir }}
 
 jobs:
 
