@@ -41,7 +41,7 @@ jobs:
           yamllint .
   molecule:
     name: Molecule
-    
+
     defaults:
       run:
         shell: bash
