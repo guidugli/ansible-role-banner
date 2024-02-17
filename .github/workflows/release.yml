@@ -13,7 +13,7 @@ name: Release
 
 defaults:
   run:
-    working-directory: 'guidugli.banner'
+    working-directory: ${{ vars.WORKING_DIR }}
 
 jobs:
 
@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          path: 'guidugli.banner'
+          path: ${{ vars.WORKING_DIR }}
 
       - name: Set up Python 3.
         uses: actions/setup-python@v4
