@@ -16,6 +16,10 @@ jobs:
 
   lint:
     name: Lint
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ vars.WORKING_DIR }}
     environment: production
     runs-on: ubuntu-20.04
     steps:
@@ -37,7 +41,11 @@ jobs:
           yamllint .
   molecule:
     name: Molecule
-    environment: production
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ vars.WORKING_DIR }}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
