@@ -4,6 +4,13 @@
 - name: Validate provided variables and set os dependent variables
   ansible.builtin.import_tasks: asserts.yml
 
+- name: Check if files are links
+  include_tasks: check_link.yml
+  loop:
+    - /etc/motd
+    - /etc/issue
+    - /etc/issue.net
+
 # Use copy module to copy in the appropriate files based on variable and set permissions
 - name: Install motd/issue/issue.net  banners
   ansible.builtin.copy:

@@ -1,0 +1,12 @@
+---
+
+- name: Check if file is a symlink {{ item }}
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: stat_cmd
+
+- name: Remove link if file is a symlink {{ item }}
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  when: stat_cmd.stat.islnk is defined and stat_cmd.stat.islnk
