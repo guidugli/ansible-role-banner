@@ -1,29 +1,34 @@
 ---
 # tasks file for banner
 
-- name: Validate provided variables and set os dependent variables
-  ansible.builtin.import_tasks: asserts.yml
+- name: Execute role tasks
+  block:
 
-- name: Check if files are links
-  include_tasks: check_link.yml
-  loop:
-    - /etc/motd
-    - /etc/issue
-    - /etc/issue.net
+    - name: Validate provided variables and set os dependent variables
+      ansible.builtin.import_tasks: asserts.yml
+    
+    - name: Check if files are links
+      include_tasks: check_link.yml
+      loop:
+        - /etc/motd
+        - /etc/issue
+        - /etc/issue.net
+    
+    # Use copy module to copy in the appropriate files based on variable and set permissions
+    - name: Install motd/issue/issue.net  banners
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "/etc/{{ item.name }}"
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      loop:
+        - { name: motd, src: "{{ banner_motd_file | default('undefined') }}" }
+        - { name: issue, src: "{{ banner_issue_file | default('undefined') }}" }
+        - { name: issue.net, src: "{{ banner_issuenet_file | default('undefined') }}" }
+      when: item.src != 'undefined'
+      tags:
+        - BANNERS_CONFIG
 
-# Use copy module to copy in the appropriate files based on variable and set permissions
-- name: Install motd/issue/issue.net  banners
-  ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "/etc/{{ item.name }}"
-    owner: root
-    group: root
-    mode: '0644'
-    backup: yes
-  loop:
-    - { name: motd, src: "{{ banner_motd_file | default('undefined') }}" }
-    - { name: issue, src: "{{ banner_issue_file | default('undefined') }}" }
-    - { name: issue.net, src: "{{ banner_issuenet_file | default('undefined') }}" }
-  when: item.src != 'undefined'
-  tags:
-    - BANNERS_CONFIG
+  become: yes
