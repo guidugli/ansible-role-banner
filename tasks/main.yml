@@ -1,34 +1,42 @@
 ---
-# tasks file for banner
+- name: Validate semantic role inputs
+  ansible.builtin.import_tasks: assert.yml
 
-- name: Execute role tasks
-  block:
+- name: Remove existing managed banner symlinks
+  ansible.builtin.include_tasks: remove_symlink.yml
+  loop:
+    - path: /etc/motd
+      enabled: "{{ banner_manage_motd }}"
+    - path: /etc/issue
+      enabled: "{{ banner_manage_issue }}"
+    - path: /etc/issue.net
+      enabled: "{{ banner_manage_issue_net }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - banner_remove_existing_symlinks | bool
+    - item.enabled | bool
 
-    - name: Validate provided variables and set os dependent variables
-      ansible.builtin.import_tasks: asserts.yml
-    
-    - name: Check if files are links
-      include_tasks: check_link.yml
-      loop:
-        - /etc/motd
-        - /etc/issue
-        - /etc/issue.net
-    
-    # Use copy module to copy in the appropriate files based on variable and set permissions
-    - name: Install motd/issue/issue.net  banners
-      ansible.builtin.copy:
-        src: "{{ item.src }}"
-        dest: "/etc/{{ item.name }}"
-        owner: root
-        group: root
-        mode: '0644'
-        backup: yes
-      loop:
-        - { name: motd, src: "{{ banner_motd_file | default('undefined') }}" }
-        - { name: issue, src: "{{ banner_issue_file | default('undefined') }}" }
-        - { name: issue.net, src: "{{ banner_issuenet_file | default('undefined') }}" }
-      when: item.src != 'undefined'
-      tags:
-        - BANNERS_CONFIG
-
-  become: yes
+- name: Install configured banner files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.path }}"
+    owner: "{{ banner_owner }}"
+    group: "{{ banner_group }}"
+    mode: "{{ banner_mode }}"
+    backup: "{{ banner_backup }}"
+  loop:
+    - path: /etc/motd
+      src: "{{ banner_motd_file }}"
+      enabled: "{{ banner_manage_motd }}"
+    - path: /etc/issue
+      src: "{{ banner_issue_file }}"
+      enabled: "{{ banner_manage_issue }}"
+    - path: /etc/issue.net
+      src: "{{ banner_issuenet_file }}"
+      enabled: "{{ banner_manage_issue_net }}"
+  loop_control:
+    label: "{{ item.path }} <= {{ item.src }}"
+  when: item.enabled | bool
+  tags:
+    - banner

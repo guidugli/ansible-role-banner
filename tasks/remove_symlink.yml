@@ -1,0 +1,14 @@
+---
+- name: Gather banner target details for {{ item.path }}
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+    follow: false
+  register: banner_target_stat
+
+- name: Remove banner target symlink for {{ item.path }}
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when:
+    - banner_target_stat.stat.exists | default(false)
+    - banner_target_stat.stat.islnk | default(false)

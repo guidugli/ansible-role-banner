@@ -1,0 +1,27 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Seed placeholder files for managed banner targets
+      ansible.builtin.copy:
+        dest: "/tmp{{ item | regex_replace('^/etc', '') }}.seed"
+        content: |
+          placeholder content for {{ item }}
+        mode: '0644'
+      loop: "{{ managed_banner_targets }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Replace managed banner targets with symlinks before converge
+      ansible.builtin.file:
+        src: "/tmp{{ item | regex_replace('^/etc', '') }}.seed"
+        dest: "{{ item }}"
+        state: link
+        force: true
+      loop: "{{ managed_banner_targets }}"
+      loop_control:
+        label: "{{ item }}"

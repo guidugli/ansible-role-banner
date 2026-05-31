@@ -1,0 +1,87 @@
+---
+- name: Verify
+  hosts: all
+  become: false
+  gather_facts: false
+  vars:
+    banner_expected_targets:
+      - path: /etc/motd
+        expected_file: banner.txt
+      - path: /etc/issue
+        expected_file: banner.txt
+      - path: /etc/issue.net
+        expected_file: banner.txt
+
+  tasks:
+    - name: Gather stats for managed banner files
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+        follow: false
+      loop: "{{ banner_expected_targets }}"
+      loop_control:
+        label: "{{ item.path }}"
+      register: banner_target_stats
+
+    - name: Assert managed banner files exist and are regular files
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists | default(false)
+          - not (item.stat.islnk | default(false))
+          - item.stat.pw_name == 'root'
+          - item.stat.gr_name == 'root'
+          - item.stat.mode == '0644'
+        quiet: true
+        fail_msg: >-
+          Banner target {{ item.stat.path | default('unknown') }} is missing,
+          still a symlink, or does not have expected ownership/mode.
+      loop: "{{ banner_target_stats.results }}"
+      loop_control:
+        label: "{{ item.stat.path | default('unknown') }}"
+
+    - name: Read deployed banner contents
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ banner_expected_targets }}"
+      loop_control:
+        label: "{{ item.path }}"
+      register: deployed_banner_contents
+
+    - name: Read expected banner source contents from role files
+      ansible.builtin.set_fact:
+        expected_banner_contents: >-
+          {{
+            expected_banner_contents | default({}) |
+            combine({
+              item.expected_file: lookup(
+                'ansible.builtin.file',
+                playbook_dir ~ '/../../files/' ~ item.expected_file
+              )
+            })
+          }}
+      loop: "{{ banner_expected_targets }}"
+      loop_control:
+        label: "{{ item.expected_file }}"
+
+    - name: Assert deployed banner content matches expected source file
+      ansible.builtin.assert:
+        that:
+          - >-
+            (
+              item.content
+              | b64decode
+              | regex_replace('[ \t]+\n', '\n')
+              | trim
+            )
+            ==
+            (
+              expected_banner_contents[item.item.expected_file]
+              | regex_replace('[ \t]+\n', '\n')
+              | trim
+            )
+        quiet: true
+        fail_msg: >-
+          Banner target {{ item.source }} does not match normalized expected
+          content from files/{{ item.item.expected_file }}.
+      loop: "{{ deployed_banner_contents.results }}"
+      loop_control:
+        label: "{{ item.source }}"

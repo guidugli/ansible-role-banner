@@ -1,0 +1,16 @@
+---
+- name: Validate banner role semantic inputs
+  ansible.builtin.assert:
+    that:
+      - banner_manage_motd | bool or banner_manage_issue | bool or banner_manage_issue_net | bool
+      - (not banner_manage_motd | bool) or (banner_motd_file | string | trim | length > 0)
+      - (not banner_manage_issue | bool) or (banner_issue_file | string | trim | length > 0)
+      - (not banner_manage_issue_net | bool) or (banner_issuenet_file | string | trim | length > 0)
+      - banner_owner | string | trim | length > 0
+      - banner_group | string | trim | length > 0
+      - banner_mode is match('^[0-7]{4}$')
+    fail_msg: >-
+      Invalid banner role configuration. Ensure at least one target is enabled,
+      enabled targets use non-empty source file names, owner/group are non-empty,
+      and banner_mode is an octal string such as 0644.
+    quiet: true

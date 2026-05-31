@@ -1,0 +1,64 @@
+---
+argument_specs:
+  main:
+    short_description: Configure Linux login and pre-authentication banners.
+    description:
+      - Manage /etc/motd, /etc/issue, and /etc/issue.net using files shipped with the role.
+      - The play should control privilege escalation when elevated access is required.
+    author: Carlos Eduardo Panazzolo Guidugli
+    options:
+      banner_manage_motd:
+        type: bool
+        default: true
+        description:
+          - Whether the role should manage /etc/motd.
+      banner_manage_issue:
+        type: bool
+        default: true
+        description:
+          - Whether the role should manage /etc/issue.
+      banner_manage_issue_net:
+        type: bool
+        default: true
+        description:
+          - Whether the role should manage /etc/issue.net.
+      banner_motd_file:
+        type: str
+        default: banner.txt
+        description:
+          - File name under the role files/ directory to copy to /etc/motd.
+      banner_issue_file:
+        type: str
+        default: banner.txt
+        description:
+          - File name under the role files/ directory to copy to /etc/issue.
+      banner_issuenet_file:
+        type: str
+        default: banner.txt
+        description:
+          - File name under the role files/ directory to copy to /etc/issue.net.
+      banner_remove_existing_symlinks:
+        type: bool
+        default: true
+        description:
+          - Remove managed banner targets first when they are symbolic links.
+      banner_owner:
+        type: str
+        default: root
+        description:
+          - Owner for managed banner files.
+      banner_group:
+        type: str
+        default: root
+        description:
+          - Group for managed banner files.
+      banner_mode:
+        type: str
+        default: '0644'
+        description:
+          - File mode for managed banner files.
+      banner_backup:
+        type: bool
+        default: false
+        description:
+          - Whether to create backups when managed banner files change.
