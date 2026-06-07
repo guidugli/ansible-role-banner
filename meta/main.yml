@@ -24,7 +24,7 @@ galaxy_info:
     - name: Debian
       versions:
         - "trixie"
-        - "bullseye"
+        - "bookworm"
   galaxy_tags:
     - banner
     - motd
