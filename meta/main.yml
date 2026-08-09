@@ -4,13 +4,13 @@
 
 dependencies: []
 galaxy_info:
-  role_name: audit
+  role_name: banner
   namespace: guidugli
   author: guidugli
   company: Creuzo Tech
   description: >-
-    Configure Linux login and pre-authentication banners using managed files for
-    /etc/motd, /etc/issue, and /etc/issue.net.
+    Manage Linux login and pre-authentication banners in /etc/motd,
+    /etc/issue, and /etc/issue.net.
   license: MIT
   min_ansible_version: '2.14'
   platforms:

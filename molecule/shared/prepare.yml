@@ -1,10 +1,12 @@
 ---
-- name: Prepare
+- name: Prepare banner targets
   hosts: all
-  become: true
   gather_facts: false
-  vars_files:
-    - vars.yml
+  vars:
+    managed_banner_targets:
+      - /etc/motd
+      - /etc/issue
+      - /etc/issue.net
   tasks:
     - name: Seed placeholder files for managed banner targets
       ansible.builtin.copy:
@@ -15,6 +17,9 @@
       loop: "{{ managed_banner_targets }}"
       loop_control:
         label: "{{ item }}"
+      tags:
+        - banner
+        - config
 
     - name: Replace managed banner targets with symlinks before converge
       ansible.builtin.file:
@@ -25,3 +30,6 @@
       loop: "{{ managed_banner_targets }}"
       loop_control:
         label: "{{ item }}"
+      tags:
+        - banner
+        - config

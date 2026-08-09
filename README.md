@@ -1,227 +1,113 @@
+[![CI](https://github.com/guidugli/ansible-role-banner/actions/workflows/CI.yml/badge.svg)](https://github.com/guidugli/ansible-role-banner/actions/workflows/CI.yml)
+[![Release](https://img.shields.io/github/v/tag/guidugli/ansible-role-banner?label=release)](https://github.com/guidugli/ansible-role-banner/tags)
+[![Galaxy](https://img.shields.io/badge/galaxy-guidugli.banner-5bbdbf)](https://galaxy.ansible.com/ui/standalone/roles/guidugli/banner/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 # Ansible Role: banner
 
-[![CI](https://github.com/guidugli/ansible-role-banner/actions/workflows/CI.yml/badge.svg)](https://github.com/guidugli/ansible-role-banner/actions/workflows/CI.yml)
-[![Release](https://github.com/guidugli/ansible-role-banner/actions/workflows/release.yml/badge.svg)](https://github.com/guidugli/ansible-role-banner/actions/workflows/release.yml)
-[![Galaxy](https://img.shields.io/badge/ansible--galaxy-guidugli.banner-blue.svg)](https://galaxy.ansible.com/ui/standalone/roles/guidugli/banner/)
-[![License](https://img.shields.io/github/license/guidugli/ansible-role-banner)](LICENSE)
+Manage Linux login and pre-authentication banners by deploying role-provided files to `/etc/motd`, `/etc/issue`, and `/etc/issue.net`. Each target can be enabled independently, and existing symbolic links can be replaced safely before deterministic file deployment.
 
-Manage Linux login and pre-authentication banners by deploying static files to `/etc/motd`, `/etc/issue`, and `/etc/issue.net`.
+## Requirements
 
-## Overview
-
-This role provides a small, predictable banner-management surface:
-
-- optional management of `motd`, `issue`, and `issue.net`
-- shipped banner files copied with deterministic ownership and mode
-- optional removal of existing symbolic links before file deployment
-- semantic validation through `meta/argument_specs.yml` plus `tasks/assert.yml`
-- Molecule coverage that verifies symlink replacement, idempotence, file mode, and file content
-- metadata generated from a single source of truth in `molecule/shared/vars.yml`
+- Ansible Core 2.14 or newer, as declared by the generated role metadata.
+- A Linux target that uses `/etc/motd`, `/etc/issue`, or `/etc/issue.net`.
+- Elevated access to write under `/etc`. Supply privilege escalation outside this role.
+- The `containers.podman` collection at version 1.10.0 or newer for the included Molecule scenarios.
 
 ## Features
 
-- Uses `ansible.builtin.*` modules consistently.
-- Keeps privilege escalation at the play level instead of forcing `become` inside role tasks.
-- Avoids duplicate task-level `validate_argument_spec`; role argument validation is handled automatically by Ansible when the role is loaded.
-- Uses concrete defaults for booleans and validated strings to avoid auto-validation pitfalls.
-- Keeps test assets readable and DRY with shared Molecule playbooks.
+- Independently manages MOTD, local-console, and remote pre-authentication banners.
+- Replaces managed symlinks only when `banner_remove_existing_symlinks` is enabled.
+- Uses idempotent `ansible.builtin.stat`, `ansible.builtin.file`, and `ansible.builtin.copy` operations.
+- Validates all public inputs through `meta/argument_specs.yml` and semantic assertions.
+- Applies consistent `banner` plus functional task tags.
+- Keeps privilege escalation under caller control.
+- Uses shared Molecule converge and verification plays.
 
 ## Supported platforms
 
-The generated metadata currently declares support for:
+The platform matrix and generated metadata cover:
 
-- Ubuntu: `noble`, `jammy`
-- Debian: `trixie`, `bookworm`
-- Fedora: `43`, `42`
+- Ubuntu 26.04 and 24.04
+- Debian 13 and 12
+- Fedora 44 and 43
 
-## Role variables
+The role itself manages static files and does not require systemd.
 
-See `defaults/main.yml` for the complete defaults.
+## Variables
 
-```yaml
----
-banner_manage_motd: true
-banner_manage_issue: true
-banner_manage_issue_net: true
+All public variables are defined in `defaults/main.yml` and mirrored in `meta/argument_specs.yml`.
 
-banner_motd_file: banner.txt
-banner_issue_file: banner.txt
-banner_issuenet_file: banner.txt
+| Variable | Type | Default | Description |
+|---|---|---:|---|
+| `banner_manage_motd` | boolean | `true` | Manage `/etc/motd`. When false, `banner_motd_file` is ignored. |
+| `banner_manage_issue` | boolean | `true` | Manage `/etc/issue`. When false, `banner_issue_file` is ignored. |
+| `banner_manage_issue_net` | boolean | `true` | Manage `/etc/issue.net`. When false, `banner_issuenet_file` is ignored. |
+| `banner_motd_file` | string | `banner.txt` | Source file under the role `files/` directory for `/etc/motd`. Must be non-empty when MOTD management is enabled. |
+| `banner_issue_file` | string | `banner.txt` | Source file under the role `files/` directory for `/etc/issue`. Must be non-empty when issue management is enabled. |
+| `banner_issuenet_file` | string | `banner.txt` | Source file under the role `files/` directory for `/etc/issue.net`. Must be non-empty when issue.net management is enabled. |
+| `banner_remove_existing_symlinks` | boolean | `true` | Remove an enabled destination first when it is a symbolic link, allowing the role to create a regular file. |
+| `banner_owner` | string | `root` | Owner of every managed banner file. Must be non-empty. |
+| `banner_group` | string | `root` | Group of every managed banner file. Must be non-empty. |
+| `banner_mode` | string | `'0644'` | File mode for every managed banner file. It must be a four-digit octal string. |
+| `banner_backup` | boolean | `false` | Ask the copy module to retain a backup when managed content changes. |
 
-banner_remove_existing_symlinks: true
-banner_owner: root
-banner_group: root
-banner_mode: '0644'
-banner_backup: false
-```
+At least one target must remain enabled. Source names refer to files in the role's `files/` directory, not files on the managed host.
 
-### Variable behavior notes
-
-- `banner_*_file` values must refer to files located under the role `files/` directory.
-- Empty strings are treated as invalid for enabled banner targets.
-- If you disable a target with `banner_manage_*: false`, its file variable is ignored.
-- `banner_mode` must be a four-digit octal string such as `0644`.
-
-## Important behavior
-
-### Symlink handling
-
-Some systems or base images may ship `/etc/motd`, `/etc/issue`, or `/etc/issue.net` as symbolic links. When `banner_remove_existing_symlinks` is `true`, the role removes the link first and then manages the target path as a regular file.
-
-### Privilege escalation
-
-This role intentionally does **not** set `become: true` inside role tasks. The caller should decide that at the play level.
-
-Example:
+## Example playbook
 
 ```yaml
 ---
-- name: Apply login banners
-  hosts: all
-  become: true
-  roles:
-    - role: guidugli.banner
-```
-
-## How it works
-
-1. Ansible performs automatic role argument validation using `meta/argument_specs.yml`.
-2. `tasks/assert.yml` performs semantic checks that are easier to express as assertions.
-3. If enabled, symlink banner targets are removed.
-4. The role copies the requested files from `files/` into `/etc` with the configured owner, group, mode, and backup behavior.
-
-## Usage examples
-
-### Default behavior
-
-```yaml
----
-- name: Configure standard banners
-  hosts: all
-  become: true
-  roles:
-    - role: guidugli.banner
-```
-
-### Manage only `/etc/issue` and `/etc/issue.net`
-
-```yaml
----
-- name: Configure console pre-authentication banners only
-  hosts: all
+- name: Configure login banners
+  hosts: linux
   become: true
   roles:
     - role: guidugli.banner
       vars:
-        banner_manage_motd: false
-        banner_issue_file: console_banner.txt
-        banner_issuenet_file: console_banner.txt
+        banner_manage_motd: true
+        banner_manage_issue: true
+        banner_manage_issue_net: true
+        banner_motd_file: banner.txt
+        banner_issue_file: banner.txt
+        banner_issuenet_file: banner.txt
+        banner_remove_existing_symlinks: true
+        banner_mode: '0644'
 ```
 
-### Preserve existing symlinks
+To manage only pre-authentication banners, set `banner_manage_motd: false` and leave the two issue targets enabled.
 
-```yaml
----
-- name: Skip symlink replacement
-  hosts: all
-  become: true
-  roles:
-    - role: guidugli.banner
-      vars:
-        banner_remove_existing_symlinks: false
-```
-
-## Molecule testing
-
-The role uses a shared Molecule layout:
-
-```text
-molecule/
-  shared/
-    vars.yml
-    prepare.yml
-    converge.yml
-    verify.yml
-  default/
-    molecule.yml
-    prepare.yml
-    converge.yml
-    verify.yml
-```
-
-The default scenario:
-
-- creates symlinks for the managed banner targets during `prepare.yml`
-- converges the role with play-level `become: true`
-- relies on Molecule idempotence checks
-- verifies regular-file replacement, ownership, mode, and deployed content
-
-Typical local commands:
+## Molecule testing instructions
 
 ```bash
-python -m pip install --upgrade pip
-python -m pip install "ansible-core>=2.16,<2.20" "molecule-plugins[docker]" molecule ansible-lint yamllint
-molecule test
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements-dev.txt
+ansible-galaxy collection install -r requirements.yml
+yamllint .
+ansible-lint .
+molecule test -s default
+molecule test -s systemd
 ```
 
-To test a different container image with the shared scenario:
+The shared prepare play creates symlink fixtures. The verify play checks regular-file replacement, ownership, group, mode, and exact deployed content. The default scenario includes Molecule's idempotence phase.
 
-```bash
-MOLECULE_IMAGE=docker.io/geerlingguy/docker-debian13-ansible:latest molecule test
-```
+## Execution notes
 
-## Metadata generation
-
-`meta/main.yml` is generated from:
-
-- `templates/meta_main.yml.j2`
-- `molecule/shared/vars.yml`
-- `scripts/render_meta_main.py`
-
-Refresh generated metadata with:
-
-```bash
-./scripts/update_release_metadata.sh
-```
-
-The helper script performs a lightweight `py_compile` preflight before writing generated files.
+- **Privilege model:** role tasks never declare `become`, `become_user`, or `become_method`. Real-host callers should use `become: true` at the play, inventory, or automation-controller level because the role writes under `/etc` and normally assigns root ownership.
+- **Container behavior:** the Molecule containers execute as root while shared plays explicitly use `become: false`. No role task assumes that privilege escalation is available inside a container.
+- **Systemd behavior:** the role has no service, systemd, unit-file, mount, sysctl, or init operations. The systemd scenario therefore exercises the same static-file behavior in a systemd-capable environment without systemd-specific role logic.
+- **Tags:** use `--tags banner` for the whole role, `--tags validate` for validation, or `--tags config` for banner-file management.
 
 ## Release workflow
 
-- CI regenerates metadata and fails if committed generated assets drift from the source template/data.
-- The release workflow re-runs validation on version tags and then triggers Ansible Galaxy role import using the repository name and a GitHub Actions secret.
+Repository metadata is generated from `templates/meta_main.yml.j2` and `molecule/shared/vars.yml`. Do not edit generated `meta/main.yml` directly.
 
-Required repository configuration:
-
-- secret: `GALAXY_API_KEY`
-- variable: `WORKING_DIR` (recommended if you check out the repo into a nested path)
-- variable: `GALAXY_NAMESPACE` (for the release workflow)
-
-## Repository structure
-
-```text
-.
-├── defaults/
-├── files/
-├── handlers/
-├── meta/
-├── molecule/
-│   ├── default/
-│   └── shared/
-├── scripts/
-├── tasks/
-├── templates/
-├── .github/workflows/
-├── README.md
-└── LICENSE
+```bash
+./scripts/update_release_metadata.sh
+./scripts/release.sh --version v1.2.0 --message "Release v1.2.0"
 ```
 
-## Design notes
-
-- This role is **not** a bootstrap/pre-Python role, so it uses normal Ansible modules rather than `raw`.
-- The role keeps its public variables in `defaults/main.yml`; `vars/main.yml` should remain empty or be removed unless a future internal-only need appears.
-- Metadata generation is template-first so `meta/main.yml` can be reproduced exactly.
-- A dedicated systemd Molecule scenario is unnecessary here because the role manages static files and does not exercise systemd-specific behavior.
+A version tag triggers the repository release workflow and Galaxy import when the required repository configuration is present.
 
 ## License
 

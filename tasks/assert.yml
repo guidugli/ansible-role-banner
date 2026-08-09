@@ -14,3 +14,6 @@
       enabled targets use non-empty source file names, owner/group are non-empty,
       and banner_mode is an octal string such as 0644.
     quiet: true
+  tags:
+    - banner
+    - validate

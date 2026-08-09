@@ -1,6 +1,9 @@
 ---
 - name: Validate semantic role inputs
   ansible.builtin.import_tasks: assert.yml
+  tags:
+    - banner
+    - validate
 
 - name: Remove existing managed banner symlinks
   ansible.builtin.include_tasks: remove_symlink.yml
@@ -16,6 +19,9 @@
   when:
     - banner_remove_existing_symlinks | bool
     - item.enabled | bool
+  tags:
+    - banner
+    - config
 
 - name: Install configured banner files
   ansible.builtin.copy:
@@ -40,3 +46,4 @@
   when: item.enabled | bool
   tags:
     - banner
+    - config

@@ -4,6 +4,9 @@
     path: "{{ item.path }}"
     follow: false
   register: banner_target_stat
+  tags:
+    - banner
+    - config
 
 - name: Remove banner target symlink for {{ item.path }}
   ansible.builtin.file:
@@ -12,3 +15,6 @@
   when:
     - banner_target_stat.stat.exists | default(false)
     - banner_target_stat.stat.islnk | default(false)
+  tags:
+    - banner
+    - config

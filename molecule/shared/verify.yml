@@ -1,7 +1,6 @@
 ---
-- name: Verify
+- name: Verify banner role
   hosts: all
-  become: false
   gather_facts: false
   vars:
     banner_expected_targets:
@@ -11,7 +10,6 @@
         expected_file: banner.txt
       - path: /etc/issue.net
         expected_file: banner.txt
-
   tasks:
     - name: Gather stats for managed banner files
       ansible.builtin.stat:
@@ -21,11 +19,15 @@
       loop_control:
         label: "{{ item.path }}"
       register: banner_target_stats
+      tags:
+        - banner
+        - validate
 
-    - name: Assert managed banner files exist and are regular files
+    - name: Assert managed banner files are regular files with expected attributes
       ansible.builtin.assert:
         that:
           - item.stat.exists | default(false)
+          - item.stat.isreg | default(false)
           - not (item.stat.islnk | default(false))
           - item.stat.pw_name == 'root'
           - item.stat.gr_name == 'root'
@@ -33,10 +35,13 @@
         quiet: true
         fail_msg: >-
           Banner target {{ item.stat.path | default('unknown') }} is missing,
-          still a symlink, or does not have expected ownership/mode.
+          is not a regular file, remains a symlink, or has unexpected ownership or mode.
       loop: "{{ banner_target_stats.results }}"
       loop_control:
         label: "{{ item.stat.path | default('unknown') }}"
+      tags:
+        - banner
+        - validate
 
     - name: Read deployed banner contents
       ansible.builtin.slurp:
@@ -45,43 +50,28 @@
       loop_control:
         label: "{{ item.path }}"
       register: deployed_banner_contents
+      tags:
+        - banner
+        - validate
 
-    - name: Read expected banner source contents from role files
-      ansible.builtin.set_fact:
-        expected_banner_contents: >-
-          {{
-            expected_banner_contents | default({}) |
-            combine({
-              item.expected_file: lookup(
-                'ansible.builtin.file',
-                playbook_dir ~ '/../../files/' ~ item.expected_file
-              )
-            })
-          }}
-      loop: "{{ banner_expected_targets }}"
-      loop_control:
-        label: "{{ item.expected_file }}"
-
-    - name: Assert deployed banner content matches expected source file
+    - name: Assert deployed banner content matches role source
       ansible.builtin.assert:
         that:
           - >-
-            (
-              item.content
-              | b64decode
-              | regex_replace('[ \t]+\n', '\n')
-              | trim
-            )
+            (item.content | b64decode)
             ==
-            (
-              expected_banner_contents[item.item.expected_file]
-              | regex_replace('[ \t]+\n', '\n')
-              | trim
+            lookup(
+              'ansible.builtin.file',
+              playbook_dir ~ '/../../files/' ~ item.item.expected_file,
+              rstrip=false
             )
         quiet: true
         fail_msg: >-
-          Banner target {{ item.source }} does not match normalized expected
-          content from files/{{ item.item.expected_file }}.
+          Banner target {{ item.source }} does not match
+          files/{{ item.item.expected_file }}.
       loop: "{{ deployed_banner_contents.results }}"
       loop_control:
         label: "{{ item.source }}"
+      tags:
+        - banner
+        - validate

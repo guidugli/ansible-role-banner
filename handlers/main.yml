@@ -1,5 +1,2 @@
 ---
-# handlers file for banner
-
-# - name: Update-dconf
-#  ansible.builtin.command: "dconf update"
+# This role does not require handlers.
